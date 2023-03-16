@@ -409,6 +409,7 @@ func (conn *Conn) handleClick(d RawType, game string, customer string) {
 					Value:    PortAndLand{},
 				}
 				conn.store[key] = v
+                val = v;
 			}
 
 			portAndLand := PortAndLand{}
