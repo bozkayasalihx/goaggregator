@@ -406,13 +406,16 @@ func (conn *Conn) handleClick(d RawType, game string, customer string) {
 					},
 					Game:     game,
 					Customer: customer,
-					Value:    PortAndLand{},
+					Value:    PortAndLand{
+                        Portrait: make(map[int32]map[int32]int32),
+                        Landscape: make(map[int32]map[int32]int32),
+                    },
 				}
 				conn.store[key] = v
                 val = v;
 			}
 
-			portAndLand := PortAndLand{}
+			// portAndLand := PortAndLand{}
 			var x int32
 			var y int32
 			if d.Heatmap[0].Value.(int32) > 0 {
@@ -426,15 +429,15 @@ func (conn *Conn) handleClick(d RawType, game string, customer string) {
 			}
 			cord := x + (y * d.Heatmap[2].Value.(primitive.A)[0].(int32))
 			if d.Heatmap[0].Value.(int32) > 0 {
-				if v, ok := portAndLand.Portrait[int32(d.Time)][cord]; ok {
-					portAndLand.Portrait[int32(d.Time)][cord] = v + 1
+				if v, ok := val.Value.(PortAndLand).Portrait[int32(d.Time)][cord]; ok {
+					val.Value.(PortAndLand).Portrait[int32(d.Time)][cord] = v + 1
 				}
 			} else {
-				if v, ok := portAndLand.Landscape[int32(d.Time)][cord]; ok {
-					portAndLand.Landscape[int32(d.Time)][cord] = v + 1
+				if v, ok := val.Value.(PortAndLand).Landscape[int32(d.Time)][cord]; ok {
+					val.Value.(PortAndLand).Landscape[int32(d.Time)][cord] = v + 1
 				}
 			}
-			val.Value = portAndLand
+			// val.Value = portAndLand
 			conn.store[key] = val
 		}
 	}
