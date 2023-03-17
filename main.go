@@ -268,7 +268,7 @@ func (m *Conn) AggragateEvent(data RawType, keys []string, game string, customer
 	defer m.mu.Unlock()
 	val, ok := m.store[key]
 	if !ok {
-		s := SettledType{
+		s := &SettledType{
 			ID: IDType{
 				Version:   data.Version,
 				Timestamp: day,
@@ -281,8 +281,8 @@ func (m *Conn) AggragateEvent(data RawType, keys []string, game string, customer
 			Customer: customer,
 			Value:    0,
 		}
-		m.store[key] = s
-		val = s
+		m.store[key] = *s
+		val = *s
 	}
 	var ev string
 	if event[0] != "" {
@@ -396,7 +396,7 @@ func (conn *Conn) handleClick(d RawType, game string, customer string) {
 			key := fmt.Sprintf("%s::%s::%s::%s::heatmap", d.Version, d.Os, d.Network, day)
 			val, ok := conn.store[key]
 			if !ok {
-				v := SettledType{
+				v := &SettledType{
 					ID: IDType{
 						Version:   d.Version,
 						Network:   d.Network,
@@ -406,13 +406,13 @@ func (conn *Conn) handleClick(d RawType, game string, customer string) {
 					},
 					Game:     game,
 					Customer: customer,
-					Value:    PortAndLand{
+					Value:    &PortAndLand{
                         Portrait: make(map[int32]map[int32]int32),
                         Landscape: make(map[int32]map[int32]int32),
                     },
 				}
-				conn.store[key] = v
-                val = v;
+				conn.store[key] = *v
+                val = *v;
 			}
 
 			// portAndLand := PortAndLand{}
@@ -429,13 +429,24 @@ func (conn *Conn) handleClick(d RawType, game string, customer string) {
 			}
 			cord := x + (y * d.Heatmap[2].Value.(primitive.A)[0].(int32))
 			if d.Heatmap[0].Value.(int32) > 0 {
-				if v, ok := val.Value.(PortAndLand).Portrait[int32(d.Time)][cord]; ok {
-					val.Value.(PortAndLand).Portrait[int32(d.Time)][cord] = v + 1
-				}
+				if v, ok := val.Value.(*PortAndLand).Portrait[int32(d.Time)][cord]; ok {
+					val.Value.(*PortAndLand).Portrait[int32(d.Time)][cord] = v + 1
+				}else {
+                    if val.Value.(*PortAndLand).Portrait[int32(d.Time)] == nil {
+                        val.Value.(*PortAndLand).Portrait[int32(d.Time)] = make(map[int32]int32)
+                    }
+					val.Value.(*PortAndLand).Portrait[int32(d.Time)][cord] = 0
+                }
+
 			} else {
-				if v, ok := val.Value.(PortAndLand).Landscape[int32(d.Time)][cord]; ok {
-					val.Value.(PortAndLand).Landscape[int32(d.Time)][cord] = v + 1
-				}
+				if v, ok := val.Value.(*PortAndLand).Landscape[int32(d.Time)][cord]; ok {
+					val.Value.(*PortAndLand).Landscape[int32(d.Time)][cord] = v + 1
+				}else {
+                    if val.Value.(*PortAndLand).Landscape[int32(d.Time)] == nil {
+                        val.Value.(*PortAndLand).Landscape[int32(d.Time)] = make(map[int32]int32) 
+                    }
+					val.Value.(*PortAndLand).Landscape[int32(d.Time)][cord] = 0
+                }
 			}
 			// val.Value = portAndLand
 			conn.store[key] = val
@@ -453,7 +464,7 @@ func (conn *Conn) handleCtaClick(data RawType, gameId string, customerId string)
 
 	v, ok := conn.store[key]
 	if !ok {
-		s := SettledType{
+		s := &SettledType{
 			ID: IDType{
 				Version:   data.Version,
 				Network:   data.Network,
@@ -470,8 +481,8 @@ func (conn *Conn) handleCtaClick(data RawType, gameId string, customerId string)
 			Game:     gameId,
 			Customer: customerId,
 		}
-		conn.store[key] = s
-		v = s
+		conn.store[key] = *s
+		v = *s
 	}
 
 	if v.Value != nil {
@@ -516,7 +527,7 @@ func (c *Conn) Listener() {
 				// c.queue.PushBack(col)
 			// }
 		//}
-		c.queue.PushBack("unprocessedRawEvents20230315")
+		c.queue.PushBack("all_data")
 
 
 		if c.queue.Len() != 0 {
