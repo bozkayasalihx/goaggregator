@@ -1,5 +1,11 @@
 build: 
-	go build -o bin/aggragate
+	go build -o bin/goaggr
+
+buildl: 
+	GOOS=linux go build -o bin/goaggr
 
 run: build
 	bin/aggragate
+
+
+.PHONY: build buildl run
