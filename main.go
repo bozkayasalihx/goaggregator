@@ -20,6 +20,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
+
 var URL string
 var customerAndGameUrl string
 var gameAndCustomers string
@@ -74,10 +75,9 @@ type Conn struct {
 	queue         *list.List
 }
 
-func NewConnection() *Conn {
+func NewConnection(ctx context.Context) *Conn {
 	var DATABASE string = os.Getenv("DATABASE")
 	var MONGO_URL string = os.Getenv("MONGO_URL")
-	ctx := context.Background()
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(MONGO_URL))
 	if err != nil {
 		log.Fatalf("couldn't connect to mongo %v", err)
@@ -86,7 +86,7 @@ func NewConnection() *Conn {
 	db := client.Database(DATABASE)
 
 	c := &Conn{
-		ctx:           ctx,
+        ctx: ctx,
 		client:        db,
 		mu:            sync.RWMutex{},
 		signal:        make(chan int, 100),
@@ -124,10 +124,32 @@ func (conn *Conn) preFetcher(col *mongo.Collection, c context.Context) {
 	}
 }
 
+
 func main() {
-	server := NewConnection()
+    contxt:= context.Background(); 
+	server := NewConnection(contxt);
 	customerAndGameClient, c := store.NewClient(customerAndGameUrl)
 	gameAndCustomerCollection := customerAndGameClient.Database("results").Collection(gameAndCustomers)
+
+    // ctx, cancel := context.WithCancel(contxt);
+    // chanCh:= make(chan os.Signal, 1);
+    // server.ctx = ctx;
+
+    // signal.Notify(chanCh, os.Interrupt);
+
+    // defer func() {
+    //     signal.Stop(chanCh);
+    //     cancel()
+    // }() 
+
+    // go func () {
+    //     select {
+    //     case <- chanCh: 
+    //         cancel()
+    //     case <- ctx.Done():
+    //     }
+    // }() 
+
 
 	fmt.Println("prefetching..")
 	server.preFetcher(gameAndCustomerCollection, c)
@@ -415,7 +437,6 @@ func (conn *Conn) handleClick(d RawType, game string, customer string) {
                 val = *v;
 			}
 
-			// portAndLand := PortAndLand{}
 			var x int32
 			var y int32
 			if d.Heatmap[0].Value.(int32) > 0 {
@@ -448,7 +469,6 @@ func (conn *Conn) handleClick(d RawType, game string, customer string) {
 					val.Value.(*PortAndLand).Landscape[int32(d.Time)][cord] = 0
                 }
 			}
-			// val.Value = portAndLand
 			conn.store[key] = val
 		}
 	}

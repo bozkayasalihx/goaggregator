@@ -5,7 +5,7 @@ buildl:
 	GOOS=linux go build -o bin/goaggr
 
 run: build
-	bin/aggragate
+	bin/goaggr
 
 
 .PHONY: build buildl run

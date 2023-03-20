@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -9,7 +10,8 @@ import (
 )
 
 func TestMain(t *testing.T) {
-	server := NewConnection()
+    ctx := context.Background()
+	server := NewConnection(ctx);
 	customerAndGameClient, c := store.NewClient(customerAndGameUrl)
 	gameAndCustomerCollection := customerAndGameClient.Database("results").Collection(gameAndCustomers)
 
