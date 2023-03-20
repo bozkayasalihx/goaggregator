@@ -24,7 +24,9 @@ import (
 var URL string
 var customerAndGameUrl string
 var gameAndCustomers string
-var WRITTEN_DB string
+var WrittenDB string
+var ReadCollection string
+
 func init() {
 	rand.Seed(time.Now().UnixNano())
 	err := godotenv.Load("app.env")
@@ -36,7 +38,8 @@ func init() {
 	URL = os.Getenv("GEARBOX_URL")
 	customerAndGameUrl = os.Getenv("MONGO_CUSTOMER_AND_GAME_URL")
 	gameAndCustomers = os.Getenv("GAME_AND_CUSTOMERS")
-	WRITTEN_DB = os.Getenv("WRITTEN_DB") 
+	WrittenDB = os.Getenv("WRITTEN_DB") 
+    ReadCollection = os.Getenv("READ_COLLECTION");
 }
 
 func (conn *Conn) GameID(versionId string) (Game, error) {
@@ -164,7 +167,7 @@ func main() {
 }
 
 func (conn *Conn) Runner(ctx context.Context, db *mongo.Database) {
-	aggrCol := db.Collection(WRITTEN_DB)
+	aggrCol := db.Collection(WrittenDB)
 	for msg := range conn.signal {
 		fmt.Printf("msg %v\n", msg)
 
@@ -547,7 +550,7 @@ func (c *Conn) Listener() {
 				// c.queue.PushBack(col)
 			// }
 		//}
-		c.queue.PushBack("all_data")
+		c.queue.PushBack(ReadCollection)
 
 
 		if c.queue.Len() != 0 {
@@ -560,7 +563,7 @@ func (c *Conn) Listener() {
 		if err != nil {
 			panic(err)
 		}
-		time.Sleep(time.Hour * 1)
+        time.Sleep(time.Hour * 3)
 	}
 
 }
