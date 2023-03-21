@@ -7,6 +7,7 @@ import (
 	"log"
 	"math/rand"
 	"os"
+	"os/signal"
 	"strings"
 	"sync"
 	"time"
@@ -26,6 +27,7 @@ var customerAndGameUrl string
 var gameAndCustomers string
 var WrittenDB string
 var ReadCollection string
+var Database2 string
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
@@ -39,7 +41,8 @@ func init() {
 	customerAndGameUrl = os.Getenv("MONGO_CUSTOMER_AND_GAME_URL")
 	gameAndCustomers = os.Getenv("GAME_AND_CUSTOMERS")
 	WrittenDB = os.Getenv("WRITTEN_DB") 
-    ReadCollection = os.Getenv("READ_COLLECTION");
+    ReadCollection = os.Getenv("READ_COLLECTION")
+    Database2 = os.Getenv("DATABASE2")
 }
 
 func (conn *Conn) GameID(versionId string) (Game, error) {
@@ -132,26 +135,26 @@ func main() {
     contxt:= context.Background(); 
 	server := NewConnection(contxt);
 	customerAndGameClient, c := store.NewClient(customerAndGameUrl)
-	gameAndCustomerCollection := customerAndGameClient.Database("results").Collection(gameAndCustomers)
+	gameAndCustomerCollection := customerAndGameClient.Database(Database2).Collection(gameAndCustomers)
 
-    // ctx, cancel := context.WithCancel(contxt);
-    // chanCh:= make(chan os.Signal, 1);
-    // server.ctx = ctx;
+    ctx, cancel := context.WithCancel(contxt);
+    chanCh:= make(chan os.Signal, 1);
+    server.ctx = ctx;
 
-    // signal.Notify(chanCh, os.Interrupt);
+    signal.Notify(chanCh, os.Interrupt);
 
-    // defer func() {
-    //     signal.Stop(chanCh);
-    //     cancel()
-    // }() 
+    defer func() {
+        signal.Stop(chanCh);
+        cancel()
+    }() 
 
-    // go func () {
-    //     select {
-    //     case <- chanCh: 
-    //         cancel()
-    //     case <- ctx.Done():
-    //     }
-    // }() 
+    go func () {
+        select {
+        case <- chanCh: 
+            cancel()
+        case <- ctx.Done():
+        }
+    }() 
 
 
 	fmt.Println("prefetching..")
@@ -173,7 +176,7 @@ func (conn *Conn) Runner(ctx context.Context, db *mongo.Database) {
 
 		element := conn.queue.Back()
 		if element != nil {
-			go conn.looper(element.Value.(string))
+		    go conn.looper(element.Value.(string))
 			conn.queue.Remove(element)
 		}
 		conn.mu.Lock()
@@ -222,7 +225,7 @@ type IDType struct {
 	Network   string `bson:"network"`
 	Event     string `bson:"event"`
 	Os        string `bson:"os"`
-	Timestamp string `bson:"timestamp"`
+	Timestamp time.Time `bson:"timestamp"`
 	TimeSpan  int    `bson:"timespan"`
 }
 
@@ -383,8 +386,9 @@ type PortAndLand struct {
 	Landscape map[int32]map[int32]int32 `bson:"landscape"`
 }
 
-func DateFormat(t time.Time) string {
-	return fmt.Sprintf("%d-%02d-%02dT00:00:00.000+00:00", t.Year(), int(t.Month()), t.Day())
+func DateFormat(t time.Time) time.Time {
+    return t.UTC().Truncate(24 * time.Hour).UTC()
+	// return fmt.Sprintf("%d-%02d-%02dT00:00:00.000+00:00", t.Year(), int(t.Month()), t.Day())
 }
 
 type HeatMap struct {
@@ -540,16 +544,16 @@ func (c *Conn) Listener() {
 			fmt.Println("couldn't find any collections")
 		}
 		// counter := 0
-		 //for _, col := range cols {
-			// count, err := c.client.Collection(col).CountDocuments(c.ctx, bson.D{})
-			//  if err != nil {
-				// fmt.Printf("couldn't get length of document: %v\n", err)
-			// }
-			// if count >= 1e6 {
-				// counter++
-				// c.queue.PushBack(col)
-			// }
-		//}
+		//  for _, col := range cols {
+		// 	count, err := c.client.Collection(col).CountDocuments(c.ctx, bson.D{})
+		// 	 if err != nil {
+		// 		fmt.Printf("couldn't get length of document: %v\n", err)
+		// 	}
+		// 	if count >= 1e6 {
+		// 		counter++
+		// 		c.queue.PushBack(col)
+		// 	}
+		// }
 		c.queue.PushBack(ReadCollection)
 
 
