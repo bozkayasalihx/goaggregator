@@ -1,6 +1,8 @@
 package drop
 
 import (
+	"fmt"
+	"time"
 
 	"github.com/bozkayasalih01x/go-event/types"
 )
@@ -17,4 +19,9 @@ func DropCollection(conn *types.Conn) error {
 	// 	return err
 	// }
 	return nil
+}
+
+func YesterdayCollection() string {
+    t := time.Now()
+    return fmt.Sprintf("unprocessedRawEvents%d%02d%02d", t.Year(), t.Month(), t.Day() -1);
 }

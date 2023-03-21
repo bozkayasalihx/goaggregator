@@ -14,6 +14,7 @@ import (
 
 	"github.com/bozkayasalih01x/go-event/store"
 	"github.com/bozkayasalih01x/go-event/tester"
+	drop "github.com/bozkayasalih01x/go-event/rest"
 	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -221,12 +222,12 @@ type RawType struct {
 }
 
 type IDType struct {
-	Version   string `bson:"version"`
-	Network   string `bson:"network"`
-	Event     string `bson:"event"`
-	Os        string `bson:"os"`
+	Version   string    `bson:"version"`
+	Network   string    `bson:"network"`
+	Event     string    `bson:"event"`
+	Os        string    `bson:"os"`
 	Timestamp time.Time `bson:"timestamp"`
-	TimeSpan  int    `bson:"timespan"`
+	TimeSpan  int       `bson:"timespan"`
 }
 
 type SettledType struct {
@@ -548,13 +549,13 @@ func (c *Conn) Listener() {
 		// 	count, err := c.client.Collection(col).CountDocuments(c.ctx, bson.D{})
 		// 	 if err != nil {
 		// 		fmt.Printf("couldn't get length of document: %v\n", err)
-		// 	}
 		// 	if count >= 1e6 {
+        // 	}
 		// 		counter++
 		// 		c.queue.PushBack(col)
 		// 	}
 		// }
-		c.queue.PushBack(ReadCollection)
+		c.queue.PushBack(drop.YesterdayCollection())
 
 
 		if c.queue.Len() != 0 {
@@ -571,3 +572,4 @@ func (c *Conn) Listener() {
 	}
 
 }
+
