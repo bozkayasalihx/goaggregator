@@ -3,6 +3,7 @@ package main
 import (
 	"container/list"
 	"context"
+	"flag"
 	"fmt"
 	"log"
 	"math/rand"
@@ -12,9 +13,9 @@ import (
 	"sync"
 	"time"
 
+	drop "github.com/bozkayasalih01x/go-event/rest"
 	"github.com/bozkayasalih01x/go-event/store"
 	"github.com/bozkayasalih01x/go-event/tester"
-	drop "github.com/bozkayasalih01x/go-event/rest"
 	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -29,8 +30,13 @@ var gameAndCustomers string
 var WrittenDB string
 var ReadCollection string
 var Database2 string
+var remove bool
 
 func init() {
+
+    flag.BoolVar(&remove, "drop", false, "drop specific date from database")
+    flag.Parse()
+
 	rand.Seed(time.Now().UnixNano())
 	err := godotenv.Load("app.env")
 
@@ -157,6 +163,13 @@ func main() {
         }
     }() 
 
+    
+    if remove == true {
+        remover(server, 2023, time.Month(03), 21, "aggregationResults");
+        os.Exit(1);
+    }
+
+
 
 	fmt.Println("prefetching..")
 	server.preFetcher(gameAndCustomerCollection, c)
@@ -199,10 +212,12 @@ func (conn *Conn) Runner(ctx context.Context, db *mongo.Database) {
 			}
 		}
 
+		conn.mu.Unlock()
+
 		if conn.queue.Len() == 0 {
 			fmt.Println("all done...")
+            os.Exit(1);
 		}
-		conn.mu.Unlock()
 	}
 
 }
@@ -571,5 +586,17 @@ func (c *Conn) Listener() {
         time.Sleep(time.Hour * 3)
 	}
 
+}
+
+
+
+func remover(conn *Conn, year int, month time.Month, day int, col string) (*mongo.DeleteResult ,error) {
+    filter := bson.D{{"_id.timestamp", time.Date(year, month, day, 0, 0, 0, 0, time.UTC)}}
+    result, err := conn.client.Collection(col).DeleteMany(conn.ctx, filter, nil);
+    if err != nil {
+        return nil,err;
+ 
+    }
+    return result, nil;
 }
 
