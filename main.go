@@ -333,6 +333,8 @@ func (m *Conn) AggragateEvent(data RawType, keys []string, game string, customer
 		val.Value = val.Value.(int) + 1
 	}
 
+	fmt.Println("i' here on aggregation event")
+
 	m.store[key] = val
 
 }
