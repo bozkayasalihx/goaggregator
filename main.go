@@ -321,22 +321,15 @@ func (m *Conn) AggragateEvent(data RawType, keys []string, game string, customer
 		ev = data.Event
 	}
 
-	if val.Value != nil {
-		intValue := val.Value.(int)
-		if !oldEvent && strings.Contains(ev, "Time") && ev != "totalTime" {
-			intValue += int(data.Time)
-			val.Value = intValue
-			m.store[key] = val
-		} else if oldEvent && strings.Contains(ev, "Time") {
-			intValue += int(data.Value)
-			val.Value = intValue
-			m.store[key] = val
-		} else {
-			intValue += 1
-			val.Value = intValue
-			m.store[key] = val
-		}
+	if !oldEvent && strings.Contains(ev, "Time") && ev != "totalTime" {
+		val.Value = val.Value.(int) + int(data.Time)
+	} else if oldEvent && strings.Contains(ev, "Time") {
+		val.Value = val.Value.(int) + int(data.Value)
+	} else {
+		val.Value = val.Value.(int) + 1
 	}
+
+	m.store[key] = val
 
 }
 
@@ -502,11 +495,6 @@ func (conn *Conn) handleCtaClick(data RawType, gameId string, customerId string)
 				TimeSpan:  1440,
 				Event:     "ctaClick",
 			},
-			Value: UserUnknown{
-				User:    0,
-				Auto:    0,
-				Unknown: 0,
-			},
 			Game:     gameId,
 			Customer: customerId,
 		}
@@ -514,20 +502,22 @@ func (conn *Conn) handleCtaClick(data RawType, gameId string, customerId string)
 		v = *s
 	}
 
-	if v.Value != nil {
-		castedValue := v.Value.(UserUnknown)
-		if data.Event == "cta" {
-			if data.Value == 0 {
-				castedValue.User += 1
-			} else if data.Value == 1 {
-				castedValue.Auto += 1
-			}
-		} else {
-			castedValue.Unknown += 1
+	var castedValue = &UserUnknown{}
+	if data.Event == "cta" {
+		if data.Value == 0 {
+			castedValue.User += 1
+		} else if data.Value == 1 {
+			castedValue.Auto += 1
 		}
-		v.Value = castedValue
-		conn.store[key] = v
+	} else {
+		castedValue.Unknown += 1
 	}
+
+	fmt.Printf("i'm here to go %v\n", conn.store[key])
+	v.Value = *castedValue
+	conn.store[key] = v
+
+	fmt.Printf("data is that %v", data.Time)
 
 	if data.Time <= 60 && data.Event == "cta" {
 		conn.AggragateEvent(data, []string{"version", "network"}, customerId, gameId, false, "ctaTime")
