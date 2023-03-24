@@ -11,10 +11,9 @@ import (
 	"sync"
 	"time"
 
+	drop "github.com/bozkayasalih01x/go-event/rest"
 	"github.com/bozkayasalih01x/go-event/store"
 	"github.com/bozkayasalih01x/go-event/tester"
-
-	//drop "github.com/bozkayasalih01x/go-event/rest"
 	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -170,7 +169,7 @@ func main() {
 }
 
 func (conn *Conn) Runner(ctx context.Context, db *mongo.Database) {
-	// aggrCol := db.Collection(WrittenDB
+	aggrCol := db.Collection(WrittenDB)
 	for range conn.signal {
 		element := conn.queue.Back()
 		if element != nil {
@@ -178,29 +177,29 @@ func (conn *Conn) Runner(ctx context.Context, db *mongo.Database) {
 			conn.queue.Remove(element)
 		}
 		fmt.Println(len(conn.store))
-		// conn.mu.Lock()
-		// for _, val := range conn.store {
-		// 	_, err := aggrCol.InsertOne(ctx, val)
-		// 	if err != nil {
-		// 		f := bson.M{"_id": IDType{
-		// 			Version:   val.ID.Version,
-		// 			Network:   val.ID.Network,
-		// 			Os:        val.ID.Os,
-		// 			Event:     val.ID.Event,
-		// 			Timestamp: val.ID.Timestamp,
-		// 			TimeSpan:  val.ID.TimeSpan,
-		// 		}}
-		// 		e := aggrCol.FindOneAndUpdate(ctx, f, bson.M{"$set": val}).Err()
-		// 		if e != nil {
-		// 			fmt.Printf("another type error: %v\n", err)
-		// 		}
-		// 	}
-		// }
+		conn.mu.Lock()
+		for _, val := range conn.store {
+			_, err := aggrCol.InsertOne(ctx, val)
+			if err != nil {
+				f := bson.M{"_id": IDType{
+					Version:   val.ID.Version,
+					Network:   val.ID.Network,
+					Os:        val.ID.Os,
+					Event:     val.ID.Event,
+					Timestamp: val.ID.Timestamp,
+					TimeSpan:  val.ID.TimeSpan,
+				}}
+				e := aggrCol.FindOneAndUpdate(ctx, f, bson.M{"$set": val}).Err()
+				if e != nil {
+					fmt.Printf("another type error: %v\n", err)
+				}
+			}
+		}
 
-		// conn.mu.Unlock()
+		conn.mu.Unlock()
 		if conn.queue.Len() == 0 {
 			fmt.Println("all done...")
-			os.Exit(2)
+			os.Exit(1)
 		}
 	}
 
@@ -549,8 +548,8 @@ func (c *Conn) Listener() {
 		// 		c.queue.PushBack(col)
 		// 	}
 		// }
-		// c.queue.PushBack(drop.YesterdayCollection())
-		c.queue.PushBack("unprocessedRawEvents20230322")
+		c.queue.PushBack(drop.YesterdayCollection())
+		// c.queue.PushBack("unprocessedRawEvents20230322")
 
 		if c.queue.Len() != 0 {
 			cur := c.queue.Front()
