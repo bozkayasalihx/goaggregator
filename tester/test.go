@@ -9,8 +9,8 @@ import (
 )
 
 func RunCollection() (context.Context, *mongo.Database) {
-    MONGO_URL := os.Getenv("MONGO_TEST_URL")
-    dbName := os.Getenv("DATABASE")
+	MONGO_URL := os.Getenv("MONGO_TEST_URL")
+	dbName := os.Getenv("DATABASE")
 	ctx := context.Background()
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(MONGO_URL))
 	if err != nil {

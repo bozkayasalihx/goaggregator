@@ -9,7 +9,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 )
 
-func TestMain(t *testing.T) {
+func Test(t *testing.T) {
     ctx := context.Background()
     server := NewConnection(ctx);
     

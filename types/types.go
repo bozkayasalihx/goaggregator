@@ -8,7 +8,6 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-
 type IDType struct {
 	Version   string `bson:"version"`
 	Network   string `bson:"network"`
@@ -18,15 +17,12 @@ type IDType struct {
 	TimeSpan  int    `bson:"timespan"`
 }
 
-
 type SettledType struct {
 	ID       IDType      `bson:"_id"`
 	Customer string      `bson:"customer"`
 	Game     string      `bson:"game"`
 	Value    interface{} `bson:"value"`
 }
-
-
 
 type Conn struct {
 	client        *mongo.Database

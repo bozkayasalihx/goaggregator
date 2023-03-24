@@ -3,19 +3,18 @@ package main
 import (
 	"container/list"
 	"context"
-	"flag"
 	"fmt"
 	"log"
 	"math/rand"
 	"os"
-	"os/signal"
 	"strings"
 	"sync"
 	"time"
 
-	drop "github.com/bozkayasalih01x/go-event/rest"
 	"github.com/bozkayasalih01x/go-event/store"
 	"github.com/bozkayasalih01x/go-event/tester"
+
+	//drop "github.com/bozkayasalih01x/go-event/rest"
 	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -23,20 +22,14 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-
 var URL string
 var customerAndGameUrl string
 var gameAndCustomers string
 var WrittenDB string
 var ReadCollection string
 var Database2 string
-var remove bool
 
 func init() {
-
-    flag.BoolVar(&remove, "drop", false, "drop specific date from database")
-    flag.Parse()
-
 	rand.Seed(time.Now().UnixNano())
 	err := godotenv.Load("app.env")
 
@@ -47,9 +40,9 @@ func init() {
 	URL = os.Getenv("GEARBOX_URL")
 	customerAndGameUrl = os.Getenv("MONGO_CUSTOMER_AND_GAME_URL")
 	gameAndCustomers = os.Getenv("GAME_AND_CUSTOMERS")
-	WrittenDB = os.Getenv("WRITTEN_DB") 
-    ReadCollection = os.Getenv("READ_COLLECTION")
-    Database2 = os.Getenv("DATABASE2")
+	WrittenDB = os.Getenv("WRITTEN_DB")
+	ReadCollection = os.Getenv("READ_COLLECTION")
+	Database2 = os.Getenv("DATABASE2")
 }
 
 func (conn *Conn) GameID(versionId string) (Game, error) {
@@ -99,7 +92,7 @@ func NewConnection(ctx context.Context) *Conn {
 	db := client.Database(DATABASE)
 
 	c := &Conn{
-        ctx: ctx,
+		ctx:           ctx,
 		client:        db,
 		mu:            sync.RWMutex{},
 		signal:        make(chan int, 100),
@@ -137,42 +130,35 @@ func (conn *Conn) preFetcher(col *mongo.Collection, c context.Context) {
 	}
 }
 
-
 func main() {
-    contxt:= context.Background(); 
-	server := NewConnection(contxt);
+	contxt := context.Background()
+	server := NewConnection(contxt)
 	customerAndGameClient, c := store.NewClient(customerAndGameUrl)
 	gameAndCustomerCollection := customerAndGameClient.Database(Database2).Collection(gameAndCustomers)
+	gameAndCustomerCollection2 := customerAndGameClient.Database(Database2).Collection("old-playable-versions")
 
-    ctx, cancel := context.WithCancel(contxt);
-    chanCh:= make(chan os.Signal, 1);
-    server.ctx = ctx;
+	// ctx, cancel := context.WithCancel(contxt);
+	// chanCh:= make(chan os.Signal, 1);
+	// server.ctx = ctx;
 
-    signal.Notify(chanCh, os.Interrupt);
+	//signal.Notify(chanCh, os.Interrupt);
 
-    defer func() {
-        signal.Stop(chanCh);
-        cancel()
-    }() 
+	// defer func() {
+	// signal.Stop(chanCh);
+	// cancel()
+	// }()
 
-    go func () {
-        select {
-        case <- chanCh: 
-            cancel()
-        case <- ctx.Done():
-        }
-    }() 
-
-    
-    if remove == true {
-        remover(server, 2023, time.Month(03), 21, "aggregationResults");
-        os.Exit(1);
-    }
-
-
+	// go func () {
+	// select {
+	// case <- chanCh:
+	// cancel()
+	// case <- ctx.Done():
+	//}
+	//}()
 
 	fmt.Println("prefetching..")
 	server.preFetcher(gameAndCustomerCollection, c)
+	server.preFetcher(gameAndCustomerCollection2, c)
 	fmt.Println("prefetching done..")
 
 	c, d := tester.RunCollection()
@@ -190,9 +176,10 @@ func (conn *Conn) Runner(ctx context.Context, db *mongo.Database) {
 
 		element := conn.queue.Back()
 		if element != nil {
-		    go conn.looper(element.Value.(string))
+			go conn.looper(element.Value.(string))
 			conn.queue.Remove(element)
 		}
+		fmt.Println(len(conn.store))
 		conn.mu.Lock()
 		for _, val := range conn.store {
 			_, err := aggrCol.InsertOne(ctx, val)
@@ -213,10 +200,9 @@ func (conn *Conn) Runner(ctx context.Context, db *mongo.Database) {
 		}
 
 		conn.mu.Unlock()
-
 		if conn.queue.Len() == 0 {
 			fmt.Println("all done...")
-            os.Exit(1);
+			os.Exit(2)
 		}
 	}
 
@@ -361,19 +347,19 @@ func (conn *Conn) switchHandler(data RawType, game string, customer string) {
 	case "click":
 		conn.handleClick(data, game, customer)
 	case "cta":
+		conn.handleCtaClick(data, game, customer)
 		if data.Time <= 60 && data.Event == "cta" {
 			conn.AggragateEvent(data, []string{"version", "network"}, customer, game, false, "ctaTime")
 		}
-		conn.handleCtaClick(data, game, customer)
 	case "ctaClick":
+		conn.handleCtaClick(data, game, customer)
 		if data.Time <= 60 && data.Event == "cta" {
 			conn.AggragateEvent(data, []string{"version", "network"}, customer, game, false, "ctaTime")
 		}
-		conn.handleCtaClick(data, game, customer)
 	case "end":
-		if data.Value == 0 {
+		if data.Value == 1 {
 			conn.AggragateEvent(data, []string{"network", "version"}, game, customer, false, "gameWon")
-		} else if data.Value == 1 {
+		} else if data.Value == 0 {
 			conn.AggragateEvent(data, []string{"network", "version"}, game, customer, false, "gameLoss")
 		} else {
 			conn.AggragateEvent(data, []string{"network", "version"}, game, customer, false, "gameUnknownOutcome")
@@ -390,7 +376,7 @@ func (conn *Conn) switchHandler(data RawType, game string, customer string) {
 		conn.AggragateEvent(data, []string{"version", "network"}, game, customer, false, "totalTime")
 	case "impression":
 		conn.AggragateEvent(data, []string{"version", "network"}, game, customer, false, "impression")
-	case "gameStarted", "gameStartTime", "gameRestarted" ,"firstClick", "firstClickTime", "gameFinished", "endGameTime", "gameWon", "gameLose":
+	case "gameStarted", "gameStartTime", "gameRestarted", "firstClick", "firstClickTime", "gameFinished", "endGameTime", "gameWon", "gameLose":
 		conn.AggragateEvent(data, []string{"version", "network"}, game, customer, true, data.Event)
 	default:
 		conn.AggragateEvent(data, []string{"version", "network"}, game, customer, false, data.Event)
@@ -403,7 +389,7 @@ type PortAndLand struct {
 }
 
 func DateFormat(t time.Time) time.Time {
-    return t.UTC().Truncate(24 * time.Hour).UTC()
+	return t.UTC().Truncate(24 * time.Hour).UTC()
 	// return fmt.Sprintf("%d-%02d-%02dT00:00:00.000+00:00", t.Year(), int(t.Month()), t.Day())
 }
 
@@ -451,13 +437,13 @@ func (conn *Conn) handleClick(d RawType, game string, customer string) {
 					},
 					Game:     game,
 					Customer: customer,
-					Value:    &PortAndLand{
-                        Portrait: make(map[int32]map[int32]int32),
-                        Landscape: make(map[int32]map[int32]int32),
-                    },
+					Value: &PortAndLand{
+						Portrait:  make(map[int32]map[int32]int32),
+						Landscape: make(map[int32]map[int32]int32),
+					},
 				}
 				conn.store[key] = *v
-                val = *v;
+				val = *v
 			}
 
 			var x int32
@@ -475,22 +461,22 @@ func (conn *Conn) handleClick(d RawType, game string, customer string) {
 			if d.Heatmap[0].Value.(int32) > 0 {
 				if v, ok := val.Value.(*PortAndLand).Portrait[int32(d.Time)][cord]; ok {
 					val.Value.(*PortAndLand).Portrait[int32(d.Time)][cord] = v + 1
-				}else {
-                    if val.Value.(*PortAndLand).Portrait[int32(d.Time)] == nil {
-                        val.Value.(*PortAndLand).Portrait[int32(d.Time)] = make(map[int32]int32)
-                    }
+				} else {
+					if val.Value.(*PortAndLand).Portrait[int32(d.Time)] == nil {
+						val.Value.(*PortAndLand).Portrait[int32(d.Time)] = make(map[int32]int32)
+					}
 					val.Value.(*PortAndLand).Portrait[int32(d.Time)][cord] = 0
-                }
+				}
 
 			} else {
 				if v, ok := val.Value.(*PortAndLand).Landscape[int32(d.Time)][cord]; ok {
 					val.Value.(*PortAndLand).Landscape[int32(d.Time)][cord] = v + 1
-				}else {
-                    if val.Value.(*PortAndLand).Landscape[int32(d.Time)] == nil {
-                        val.Value.(*PortAndLand).Landscape[int32(d.Time)] = make(map[int32]int32) 
-                    }
+				} else {
+					if val.Value.(*PortAndLand).Landscape[int32(d.Time)] == nil {
+						val.Value.(*PortAndLand).Landscape[int32(d.Time)] = make(map[int32]int32)
+					}
 					val.Value.(*PortAndLand).Landscape[int32(d.Time)][cord] = 0
-                }
+				}
 			}
 			conn.store[key] = val
 		}
@@ -565,13 +551,13 @@ func (c *Conn) Listener() {
 		// 	 if err != nil {
 		// 		fmt.Printf("couldn't get length of document: %v\n", err)
 		// 	if count >= 1e6 {
-        // 	}
+		// 	}
 		// 		counter++
 		// 		c.queue.PushBack(col)
 		// 	}
 		// }
-		c.queue.PushBack(drop.YesterdayCollection())
-
+		// c.queue.PushBack(drop.YesterdayCollection())
+		c.queue.PushBack("unprocessedRawEvents20230322")
 
 		if c.queue.Len() != 0 {
 			cur := c.queue.Front()
@@ -583,20 +569,7 @@ func (c *Conn) Listener() {
 		if err != nil {
 			panic(err)
 		}
-        time.Sleep(time.Hour * 3)
+		time.Sleep(time.Hour * 3)
 	}
 
 }
-
-
-
-func remover(conn *Conn, year int, month time.Month, day int, col string) (*mongo.DeleteResult ,error) {
-    filter := bson.D{{"_id.timestamp", time.Date(year, month, day, 0, 0, 0, 0, time.UTC)}}
-    result, err := conn.client.Collection(col).DeleteMany(conn.ctx, filter, nil);
-    if err != nil {
-        return nil,err;
- 
-    }
-    return result, nil;
-}
-
