@@ -170,10 +170,8 @@ func main() {
 }
 
 func (conn *Conn) Runner(ctx context.Context, db *mongo.Database) {
-	// aggrCol := db.Collection(WrittenDB)
-	for msg := range conn.signal {
-		fmt.Printf("msg %v\n", msg)
-
+	// aggrCol := db.Collection(WrittenDB
+	for range conn.signal {
 		element := conn.queue.Back()
 		if element != nil {
 			go conn.looper(element.Value.(string))
@@ -252,7 +250,7 @@ func (conn *Conn) looper(curCol string) {
 		fmt.Printf("couldn't connect %s collections: %v\n", curCol, err)
 	}
 
-	var i int
+	// var i int
 
 	fmt.Printf("current collection %s\n", curCol)
 	defer cursor.Close(conn.ctx)
@@ -263,10 +261,10 @@ func (conn *Conn) looper(curCol string) {
 		if err != nil {
 			log.Fatalf("couldn't read current data %s with error: %v\n", curCol, err)
 		}
-		i += 1
+		// i += 1
 		resp, _ := conn.GameID(result.Version)
 		res, _ := conn.CustomerID(result.Version)
-		fmt.Println(i)
+		// fmt.Println(i)
 		if resp.GameID != "" && res.CustomerID != "" {
 			conn.switchHandler(result, resp.GameID, res.CustomerID)
 		}
@@ -333,7 +331,6 @@ func (m *Conn) AggragateEvent(data RawType, keys []string, game string, customer
 		val.Value = val.Value.(int) + 1
 	}
 
-	fmt.Println("i' here on aggregation event")
 	m.store[key] = val
 
 }
@@ -517,12 +514,9 @@ func (conn *Conn) handleCtaClick(data RawType, gameId string, customerId string)
 		castedValue.Unknown += 1
 	}
 
-	fmt.Printf("i'm here to go %v\n", conn.store[key])
 	v.Value = *castedValue
 	conn.store[key] = v
 	conn.mu.Unlock()
-
-	fmt.Printf("data is that %v event: %s", data.Time, data.Event)
 
 	if data.Time <= 60 && data.Event == "cta" {
 		conn.AggragateEvent(data, []string{"version", "network"}, customerId, gameId, false, "ctaTime")
