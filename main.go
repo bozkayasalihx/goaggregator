@@ -252,6 +252,8 @@ func (conn *Conn) looper(curCol string) {
 		fmt.Printf("couldn't connect %s collections: %v\n", curCol, err)
 	}
 
+	var i int
+
 	fmt.Printf("current collection %s\n", curCol)
 	defer cursor.Close(conn.ctx)
 	start := time.Now()
@@ -261,8 +263,10 @@ func (conn *Conn) looper(curCol string) {
 		if err != nil {
 			log.Fatalf("couldn't read current data %s with error: %v\n", curCol, err)
 		}
+		i += 1
 		resp, _ := conn.GameID(result.Version)
 		res, _ := conn.CustomerID(result.Version)
+		fmt.Println(i)
 		if resp.GameID != "" && res.CustomerID != "" {
 			conn.switchHandler(result, resp.GameID, res.CustomerID)
 		}
