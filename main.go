@@ -170,7 +170,7 @@ func main() {
 }
 
 func (conn *Conn) Runner(ctx context.Context, db *mongo.Database) {
-	aggrCol := db.Collection(WrittenDB)
+	// aggrCol := db.Collection(WrittenDB)
 	for msg := range conn.signal {
 		fmt.Printf("msg %v\n", msg)
 
@@ -180,26 +180,26 @@ func (conn *Conn) Runner(ctx context.Context, db *mongo.Database) {
 			conn.queue.Remove(element)
 		}
 		fmt.Println(len(conn.store))
-		conn.mu.Lock()
-		for _, val := range conn.store {
-			_, err := aggrCol.InsertOne(ctx, val)
-			if err != nil {
-				f := bson.M{"_id": IDType{
-					Version:   val.ID.Version,
-					Network:   val.ID.Network,
-					Os:        val.ID.Os,
-					Event:     val.ID.Event,
-					Timestamp: val.ID.Timestamp,
-					TimeSpan:  val.ID.TimeSpan,
-				}}
-				e := aggrCol.FindOneAndUpdate(ctx, f, bson.M{"$set": val}).Err()
-				if e != nil {
-					fmt.Printf("another type error: %v\n", err)
-				}
-			}
-		}
+		// conn.mu.Lock()
+		// for _, val := range conn.store {
+		// 	_, err := aggrCol.InsertOne(ctx, val)
+		// 	if err != nil {
+		// 		f := bson.M{"_id": IDType{
+		// 			Version:   val.ID.Version,
+		// 			Network:   val.ID.Network,
+		// 			Os:        val.ID.Os,
+		// 			Event:     val.ID.Event,
+		// 			Timestamp: val.ID.Timestamp,
+		// 			TimeSpan:  val.ID.TimeSpan,
+		// 		}}
+		// 		e := aggrCol.FindOneAndUpdate(ctx, f, bson.M{"$set": val}).Err()
+		// 		if e != nil {
+		// 			fmt.Printf("another type error: %v\n", err)
+		// 		}
+		// 	}
+		// }
 
-		conn.mu.Unlock()
+		// conn.mu.Unlock()
 		if conn.queue.Len() == 0 {
 			fmt.Println("all done...")
 			os.Exit(2)
@@ -348,14 +348,14 @@ func (conn *Conn) switchHandler(data RawType, game string, customer string) {
 		conn.handleClick(data, game, customer)
 	case "cta":
 		conn.handleCtaClick(data, game, customer)
-		if data.Time <= 60 && data.Event == "cta" {
-			conn.AggragateEvent(data, []string{"version", "network"}, customer, game, false, "ctaTime")
-		}
+		// if data.Time <= 60 && data.Event == "cta" {
+		// 	conn.AggragateEvent(data, []string{"version", "network"}, customer, game, false, "ctaTime")
+		// }
 	case "ctaClick":
 		conn.handleCtaClick(data, game, customer)
-		if data.Time <= 60 && data.Event == "cta" {
-			conn.AggragateEvent(data, []string{"version", "network"}, customer, game, false, "ctaTime")
-		}
+		// if data.Time <= 60 && data.Event == "cta" {
+		// 	conn.AggragateEvent(data, []string{"version", "network"}, customer, game, false, "ctaTime")
+		// }
 	case "end":
 		if data.Value == 1 {
 			conn.AggragateEvent(data, []string{"network", "version"}, game, customer, false, "gameWon")
@@ -527,6 +527,10 @@ func (conn *Conn) handleCtaClick(data RawType, gameId string, customerId string)
 		}
 		v.Value = castedValue
 		conn.store[key] = v
+	}
+
+	if data.Time <= 60 && data.Event == "cta" {
+		conn.AggragateEvent(data, []string{"version", "network"}, customerId, gameId, false, "ctaTime")
 	}
 
 }
