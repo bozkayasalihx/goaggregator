@@ -521,7 +521,7 @@ func (conn *Conn) handleCtaClick(data RawType, gameId string, customerId string)
 	v.Value = *castedValue
 	conn.store[key] = v
 
-	fmt.Printf("data is that %v", data.Time)
+	fmt.Printf("data is that %v event: %s", data.Time, data.Event)
 
 	if data.Time <= 60 && data.Event == "cta" {
 		conn.AggragateEvent(data, []string{"version", "network"}, customerId, gameId, false, "ctaTime")
