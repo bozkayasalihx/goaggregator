@@ -333,6 +333,7 @@ func (m *Conn) AggragateEvent(data RawType, keys []string, game string, customer
 		val.Value = val.Value.(int) + 1
 	}
 
+	fmt.Println("i' here on aggregation event")
 	m.store[key] = val
 
 }
@@ -486,7 +487,6 @@ func (conn *Conn) handleCtaClick(data RawType, gameId string, customerId string)
 	key := fmt.Sprintf("%s::%s::%s::%s::ctaClick", data.Version, data.Os, data.Network, day)
 
 	conn.mu.Lock()
-	defer conn.mu.Unlock()
 
 	v, ok := conn.store[key]
 	if !ok {
@@ -520,6 +520,7 @@ func (conn *Conn) handleCtaClick(data RawType, gameId string, customerId string)
 	fmt.Printf("i'm here to go %v\n", conn.store[key])
 	v.Value = *castedValue
 	conn.store[key] = v
+	conn.mu.Unlock()
 
 	fmt.Printf("data is that %v event: %s", data.Time, data.Event)
 
