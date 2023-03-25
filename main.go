@@ -11,7 +11,6 @@ import (
 	"sync"
 	"time"
 
-	drop "github.com/bozkayasalih01x/go-event/rest"
 	"github.com/bozkayasalih01x/go-event/store"
 	"github.com/bozkayasalih01x/go-event/tester"
 	"github.com/joho/godotenv"
@@ -249,8 +248,6 @@ func (conn *Conn) looper(curCol string) {
 		fmt.Printf("couldn't connect %s collections: %v\n", curCol, err)
 	}
 
-	// var i int
-
 	fmt.Printf("current collection %s\n", curCol)
 	defer cursor.Close(conn.ctx)
 	start := time.Now()
@@ -260,10 +257,8 @@ func (conn *Conn) looper(curCol string) {
 		if err != nil {
 			log.Fatalf("couldn't read current data %s with error: %v\n", curCol, err)
 		}
-		// i += 1
 		resp, _ := conn.GameID(result.Version)
 		res, _ := conn.CustomerID(result.Version)
-		// fmt.Println(i)
 		if resp.GameID != "" && res.CustomerID != "" {
 			conn.switchHandler(result, resp.GameID, res.CustomerID)
 		}
@@ -342,14 +337,8 @@ func (conn *Conn) switchHandler(data RawType, game string, customer string) {
 		conn.handleClick(data, game, customer)
 	case "cta":
 		conn.handleCtaClick(data, game, customer)
-		// if data.Time <= 60 && data.Event == "cta" {
-		// 	conn.AggragateEvent(data, []string{"version", "network"}, customer, game, false, "ctaTime")
-		// }
 	case "ctaClick":
 		conn.handleCtaClick(data, game, customer)
-		// if data.Time <= 60 && data.Event == "cta" {
-		// 	conn.AggragateEvent(data, []string{"version", "network"}, customer, game, false, "ctaTime")
-		// }
 	case "end":
 		if data.Value == 1 {
 			conn.AggragateEvent(data, []string{"network", "version"}, game, customer, false, "gameWon")
@@ -495,6 +484,7 @@ func (conn *Conn) handleCtaClick(data RawType, gameId string, customerId string)
 				TimeSpan:  1440,
 				Event:     "ctaClick",
 			},
+			Value:    &UserUnknown{},
 			Game:     gameId,
 			Customer: customerId,
 		}
@@ -502,18 +492,16 @@ func (conn *Conn) handleCtaClick(data RawType, gameId string, customerId string)
 		v = *s
 	}
 
-	var castedValue = &UserUnknown{}
 	if data.Event == "cta" {
 		if data.Value == 0 {
-			castedValue.User += 1
+			v.Value.(*UserUnknown).User += 1
 		} else if data.Value == 1 {
-			castedValue.Auto += 1
+			v.Value.(*UserUnknown).Auto += 1
 		}
 	} else {
-		castedValue.Unknown += 1
+		v.Value.(*UserUnknown).Unknown += 1
 	}
 
-	v.Value = *castedValue
 	conn.store[key] = v
 	conn.mu.Unlock()
 
@@ -548,7 +536,7 @@ func (c *Conn) Listener() {
 		// 		c.queue.PushBack(col)
 		// 	}
 		// }
-		c.queue.PushBack(drop.YesterdayCollection())
+		c.queue.PushBack(store.YesterdayCollection())
 		// c.queue.PushBack("unprocessedRawEvents20230322")
 
 		if c.queue.Len() != 0 {
