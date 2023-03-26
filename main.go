@@ -323,7 +323,6 @@ func (m *Conn) AggragateEvent(data RawType, keys []string, game string, customer
 	} else {
 		val.Value = val.Value.(int) + 1
 	}
-
 	m.store[key] = val
 
 }

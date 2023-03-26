@@ -39,6 +39,7 @@ func main() {
 	db := client.Database(DB)
 
 	date := bson.D{{"_id.timestamp", time.Date(Year, time.Month(Month), Day, 0, 0, 0, 0, time.UTC)}}
+	fmt.Printf("running on %v", date)
 	result, err := db.Collection(Collection).DeleteMany(ctx, date)
 	if err != nil {
 		log.Fatalf("couldnt delete collections: %v", err)
