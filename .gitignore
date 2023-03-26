@@ -2,3 +2,4 @@ app.env
 app.env.old
 app.env.old2
 bin
+.DS_Store
