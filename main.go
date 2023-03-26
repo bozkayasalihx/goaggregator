@@ -307,7 +307,6 @@ func (m *Conn) AggragateEvent(data RawType, keys []string, game string, customer
 			Customer: customer,
 			Value:    0,
 		}
-		m.store[key] = *s
 		val = *s
 	}
 	var ev string
@@ -488,16 +487,13 @@ func (conn *Conn) handleCtaClick(data RawType, gameId string, customerId string)
 			Game:     gameId,
 			Customer: customerId,
 		}
-		conn.store[key] = *s
 		v = *s
 	}
 
-	if data.Event == "cta" {
-		if data.Value == 0 {
-			v.Value.(*UserUnknown).User += 1
-		} else if data.Value == 1 {
-			v.Value.(*UserUnknown).Auto += 1
-		}
+	if data.Value == 0 && data.Event == "cta" {
+		v.Value.(*UserUnknown).User += 1
+	} else if data.Value == 1 && data.Event == "cta" {
+		v.Value.(*UserUnknown).Auto += 1
 	} else {
 		v.Value.(*UserUnknown).Unknown += 1
 	}
