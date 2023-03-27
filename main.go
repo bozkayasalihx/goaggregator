@@ -7,6 +7,8 @@ import (
 	"log"
 	"math/rand"
 	"os"
+	"os/signal"
+	"runtime/debug"
 	"strings"
 	"sync"
 	"time"
@@ -28,6 +30,8 @@ var ReadCollection string
 var Database2 string
 
 func init() {
+    //NOTE: disablling GC, its an experimental feature, dont use in prod
+    debug.SetGCPercent(-1)
 	rand.Seed(time.Now().UnixNano())
 	err := godotenv.Load("app.env")
 
@@ -135,24 +139,24 @@ func main() {
 	gameAndCustomerCollection := customerAndGameClient.Database(Database2).Collection(gameAndCustomers)
 	gameAndCustomerCollection2 := customerAndGameClient.Database(Database2).Collection("old-playable-versions")
 
-	// ctx, cancel := context.WithCancel(contxt);
-	// chanCh:= make(chan os.Signal, 1);
-	// server.ctx = ctx;
+	ctx, cancel := context.WithCancel(contxt);
+	chanCh:= make(chan os.Signal, 1);
+	server.ctx = ctx;
 
-	//signal.Notify(chanCh, os.Interrupt);
+	signal.Notify(chanCh, os.Interrupt);
 
-	// defer func() {
-	// signal.Stop(chanCh);
-	// cancel()
-	// }()
+	defer func() {
+	signal.Stop(chanCh);
+	cancel()
+	}()
 
-	// go func () {
-	// select {
-	// case <- chanCh:
-	// cancel()
-	// case <- ctx.Done():
-	//}
-	//}()
+	go func () {
+	select {
+	case <- chanCh:
+	cancel()
+	case <- ctx.Done():
+	}
+	}()
 
 	fmt.Println("prefetching..")
 	server.preFetcher(gameAndCustomerCollection, c)
@@ -514,25 +518,23 @@ func (c *Conn) Listener() {
 		}},
 	}
 	for {
-		_, err := c.client.ListCollectionNames(c.ctx, gen, &options.ListCollectionsOptions{
+		cols , err := c.client.ListCollectionNames(c.ctx, gen, &options.ListCollectionsOptions{
 			NameOnly: options.ListCollections().NameOnly,
 		})
 		if err != nil {
 			fmt.Println("couldn't find any collections")
 		}
-		// counter := 0
-		//  for _, col := range cols {
-		// 	count, err := c.client.Collection(col).CountDocuments(c.ctx, bson.D{})
-		// 	 if err != nil {
-		// 		fmt.Printf("couldn't get length of document: %v\n", err)
-		// 	if count >= 1e6 {
-		// 	}
-		// 		counter++
-		// 		c.queue.PushBack(col)
-		// 	}
-		// }
-		c.queue.PushBack(store.YesterdayCollection())
-		// c.queue.PushBack("unprocessedRawEvents20230322")
+		 for _, col := range cols {
+			count, err := c.client.Collection(col).CountDocuments(c.ctx, bson.D{})
+			 if err != nil {
+				fmt.Printf("couldn't get length of document: %v\n", err)
+			if count >= 1e6 {
+			}
+				c.queue.PushBack(col)
+			}
+		}
+	
+        c.queue.PushBack(store.YesterdayCollection())
 
 		if c.queue.Len() != 0 {
 			cur := c.queue.Front()
