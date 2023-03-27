@@ -1,2 +1,3 @@
-# test2
-basic test aggregator written in GO
+# simple data-aggrator
+
+### simple data aggrator based on inputs
