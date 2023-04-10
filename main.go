@@ -8,7 +8,7 @@ import (
 	"math/rand"
 	"os"
 	"os/signal"
-	"runtime/debug"
+	// "runtime/debug"
 	"strings"
 	"sync"
 	"time"
@@ -31,7 +31,7 @@ var Database2 string
 
 func init() {
     //NOTE: disablling GC, its an experimental feature, dont use in prod
-    debug.SetGCPercent(-1)
+    // debug.SetGCPercent(-1)
 	rand.Seed(time.Now().UnixNano())
 	err := godotenv.Load("app.env")
 
@@ -374,8 +374,9 @@ type PortAndLand struct {
 }
 
 func DateFormat(t time.Time) time.Time {
-	return t.UTC().Truncate(24 * time.Hour).UTC()
+	// return t.UTC().Truncate(24 * time.Hour).UTC()
 	// return fmt.Sprintf("%d-%02d-%02dT00:00:00.000+00:00", t.Year(), int(t.Month()), t.Day())
+    return t.UTC().Add(-48 * time.Hour).Truncate(24 * time.Hour).UTC();
 }
 
 type HeatMap struct {
